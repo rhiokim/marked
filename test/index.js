@@ -91,7 +91,8 @@ main:
         || (~filename.indexOf('.breaks.') && !marked.defaults.breaks)
         || (~filename.indexOf('.pedantic.') && !marked.defaults.pedantic)
         || (~filename.indexOf('.sanitize.') && !marked.defaults.sanitize)
-        || (~filename.indexOf('.smartlists.') && !marked.defaults.smartLists)) {
+        || (~filename.indexOf('.smartlists.') && !marked.defaults.smartLists)
+        || (~filename.indexOf('.smartypants.') && !marked.defaults.smartypants)) {
       skipped++;
       console.log('#%d. %s skipped.', i + 1, filename);
       continue main;
@@ -237,35 +238,45 @@ function runBench(options) {
   }
   bench('marked (pedantic)', marked);
 
-  // Discount
-  var discount = require('discount').parse;
-  bench('discount', discount);
+  // robotskirt
+  try {
+    bench('robotskirt', (function() {
+      var rs = require('robotskirt');
+      return function(text) {
+        var parser = rs.Markdown.std();
+        return parser.render(text);
+      };
+    })());
+  } catch (e) {
+    console.log('Could not bench robotskirt.');
+  }
 
-  // Showdown (Reusing the converter)
-  var showdown = (function() {
-    var Showdown = require('showdown').Showdown;
-    var convert = new Showdown.converter();
-    return function(text) {
-      return convert.makeHtml(text);
-    };
-  })();
-  bench('showdown (reuse converter)', showdown);
-
-  // Showdown
-  var showdown_slow = (function() {
-    var Showdown = require('showdown').Showdown;
-    return function(text) {
+  // showdown
+  try {
+    bench('showdown (reuse converter)', (function() {
+      var Showdown = require('showdown');
       var convert = new Showdown.converter();
-      return convert.makeHtml(text);
-    };
-  })();
-  bench('showdown (new converter)', showdown_slow);
+      return function(text) {
+        return convert.makeHtml(text);
+      };
+    })());
+    bench('showdown (new converter)', (function() {
+      var Showdown = require('showdown');
+      return function(text) {
+        var convert = new Showdown.converter();
+        return convert.makeHtml(text);
+      };
+    })());
+  } catch (e) {
+    console.log('Could not bench showdown.');
+  }
 
-  // markdown-js
-  var markdownjs = require('markdown');
-  bench('markdown-js', function(text) {
-    markdownjs.parse(text);
-  });
+  // markdown.js
+  try {
+    bench('markdown.js', require('markdown').parse);
+  } catch (e) {
+    console.log('Could not bench markdown.js.');
+  }
 }
 
 /**
